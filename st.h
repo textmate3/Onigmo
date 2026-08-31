@@ -44,13 +44,6 @@ typedef unsigned LONG_LONG st_data_t;
 #ifndef _
 # define _(args) args
 #endif
-#ifndef ANYARGS
-# ifdef __cplusplus
-#   define ANYARGS ...
-# else
-#   define ANYARGS
-# endif
-#endif
 
 typedef struct st_table st_table;
 
@@ -65,10 +58,17 @@ typedef st_index_t st_hash_func(st_data_t);
 typedef char st_check_for_sizeof_st_index_t[SIZEOF_VOIDP == (int)sizeof(st_index_t) ? 1 : -1];
 #define SIZEOF_ST_INDEX_T SIZEOF_VOIDP
 
+/* Full prototypes, so every call through these pointers is a prototyped
+ * call. C23 removes non-prototype functions from the language. */
 struct st_hash_type {
-    int (*compare)(ANYARGS /*st_data_t, st_data_t*/); /* st_compare_func* */
-    st_index_t (*hash)(ANYARGS /*st_data_t*/);        /* st_hash_func* */
+    int (*compare)(st_data_t, st_data_t); /* st_compare_func* */
+    st_index_t (*hash)(st_data_t);        /* st_hash_func* */
 };
+
+/* The iteration functions call back with (key, value, arg, error); error is
+ * nonzero only for the st_foreach_check path, when the current entry was
+ * removed while traversing. */
+typedef int st_foreach_callback_func(st_data_t, st_data_t, st_data_t, int);
 
 #define ST_INDEX_BITS (SIZEOF_ST_INDEX_T * CHAR_BIT)
 
@@ -125,9 +125,9 @@ typedef int st_update_callback_func(st_data_t *key, st_data_t *value, st_data_t 
  * results of hash() are same and compare() returns 0, otherwise the
  * behavior is undefined */
 int st_update(st_table *table, st_data_t key, st_update_callback_func *func, st_data_t arg);
-int st_foreach_with_replace(st_table *tab, int (*func)(ANYARGS), st_update_callback_func *replace, st_data_t arg);
-int st_foreach(st_table *, int (*)(ANYARGS), st_data_t);
-int st_foreach_check(st_table *, int (*)(ANYARGS), st_data_t, st_data_t);
+int st_foreach_with_replace(st_table *tab, st_foreach_callback_func *func, st_update_callback_func *replace, st_data_t arg);
+int st_foreach(st_table *, st_foreach_callback_func *, st_data_t);
+int st_foreach_check(st_table *, st_foreach_callback_func *, st_data_t, st_data_t);
 st_index_t st_keys(st_table *table, st_data_t *keys, st_index_t size);
 st_index_t st_keys_check(st_table *table, st_data_t *keys, st_index_t size, st_data_t never);
 st_index_t st_values(st_table *table, st_data_t *values, st_index_t size);
